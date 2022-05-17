@@ -18,7 +18,7 @@ def send_msg(sock, msg):
         sent_len = sock.send(msg[total_sent_len:])
         # まったく書き込めなかったらソケットの接続が終了している
         if sent_len == 0:
-            raise RuntimeError('socket connection broken')
+            raise RuntimeError("socket connection broken")
         # 書き込めた分を加算する
         total_sent_len += sent_len
 
@@ -32,8 +32,8 @@ def recv_msg(sock, total_msg_size):
         # 残りのバイト列を受信する
         received_chunk = sock.recv(total_msg_size - total_recv_size)
         # 1 バイトも読めなかったときはソケットの接続が終了している
-        if len(received_chunk) == 0:
-            raise RuntimeError('socket connection broken')
+        if not received_chunk:
+            raise RuntimeError("socket connection broken")
         # 受信したバイト列を返す
         yield received_chunk
         # 受信できたバイト数を加算する
@@ -43,42 +43,38 @@ def recv_msg(sock, total_msg_size):
 def main():
     """スクリプトとして実行されたときに呼び出されるメイン関数"""
     # IPv4 / TCP で通信するソケットを用意する
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # 'Address already in use' の回避策
-    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
-    # ループバックアドレスの TCP/54321 ポートを使う
-    server_socket.bind(('127.0.0.1', 54321))
-    # 接続を待ち受ける
-    server_socket.listen()
-    # サーバが動作を開始したことを表示する
-    print('starting server ...')
-    # クライアントからの接続を処理する
-    client_socket, (client_address, client_port) = server_socket.accept()
-    # 接続してきたクライアントの情報を表示する
-    print(f'accepted from {client_address}:{client_port}')
-    # バイト列を受信する
-    received_msg = b''.join(recv_msg(client_socket, total_msg_size=8))
-    # 受信したバイト列を表示する
-    print(f'received: {received_msg}')
-    # バイト列を 2 つの 32 ビットの整数として解釈する
-    (operand1, operand2) = struct.unpack('!ii', received_msg)
-    # 解釈した値を表示する
-    print(f'operand1: {operand1}, operand2: {operand2}')
-    # 計算する
-    result = operand1 + operand2
-    # 計算した値を表示する
-    print(f'result: {result}')
-    # 計算した値を 64 ビットの整数としてネットワークバイトオーダーのバイト列に変換する
-    result_msg = struct.pack('!q', result)
-    # ソケットにバイト列を書き込む
-    send_msg(client_socket, result_msg)
-    # 書き込んだバイト列を表示する
-    print(f'sent: {result_msg}')
-    # ソケットの接続を終了する
-    client_socket.close()
-    server_socket.close()
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
+        # 'Address already in use' の回避策
+        server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
+        # ループバックアドレスの TCP/54321 ポートを使う
+        server_socket.bind(("127.0.0.1", 54321))
+        # 接続を待ち受ける
+        server_socket.listen()
+        # サーバが動作を開始したことを表示する
+        print("starting server ...")
+        # クライアントからの接続を処理する
+        client_socket, (client_address, client_port) = server_socket.accept()
+        with client_socket:
+            # 接続してきたクライアントの情報を表示する
+            print(f"accepted from {client_address}:{client_port}")
+            # バイト列を受信する
+            received_msg = b"".join(recv_msg(client_socket, total_msg_size=8))
+            # 受信したバイト列を表示する
+            print(f"received: {received_msg}")
+            # バイト列を 2 つの 32 ビットの整数として解釈する
+            (operand1, operand2) = struct.unpack("!ii", received_msg)
+            # 解釈した値を表示する
+            print(f"operand1: {operand1}, operand2: {operand2}")
+            # 計算した値を表示する
+            print(f"result: {operand1 + operand2}")
+            # 計算した値を 64 ビットの整数としてネットワークバイトオーダーのバイト列に変換する
+            result_msg = struct.pack("!q", operand1 + operand2)
+            # ソケットにバイト列を書き込む
+            send_msg(client_socket, result_msg)
+            # 書き込んだバイト列を表示する
+            print(f"sent: {result_msg}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     """スクリプトのエントリーポイントとしてメイン関数を実行する"""
     main()

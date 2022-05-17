@@ -17,8 +17,8 @@ def send_msg(sock, msg):
         # ソケットにバイト列を書き込んで、書き込めたバイト数を得る
         sent_len = sock.send(msg[total_sent_len:])
         # まったく書き込めなかったらソケットの接続が終了している
-        if sent_len == 0:
-            raise RuntimeError('socket connection broken')
+        if not sent_len:
+            raise RuntimeError("socket connection broken")
         # 書き込めた分を加算する
         total_sent_len += sent_len
 
@@ -32,8 +32,8 @@ def recv_msg(sock, total_msg_size):
         # 残りのバイト列を受信する
         received_chunk = sock.recv(total_msg_size - total_recv_size)
         # 1 バイトも読めなかったときはソケットの接続が終了している
-        if len(received_chunk) == 0:
-            raise RuntimeError('socket connection broken')
+        if not received_chunk:
+            raise RuntimeError("socket connection broken")
         # 受信したバイト列を返す
         yield received_chunk
         # 受信できたバイト数を加算する
@@ -43,31 +43,29 @@ def recv_msg(sock, total_msg_size):
 def main():
     """スクリプトとして実行されたときに呼び出されるメイン関数"""
     # IPv4 / TCP で通信するソケットを用意する
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # ループバックアドレスの TCP/54321 ポートに接続する
-    client_socket.connect(('127.0.0.1', 54321))
-    # 足し算したい値を用意する
-    operand1, operand2 = 1000, 2000
-    # 送信する値を確認する
-    print(f'operand1: {operand1}, operand2: {operand2}')
-    # ネットワークバイトオーダーのバイト列に変換する
-    request_msg = struct.pack('!ii', operand1, operand2)
-    # ソケットにバイト列を書き込む
-    send_msg(client_socket, request_msg)
-    # 書き込んだバイト列を表示する
-    print(f'sent: {request_msg}')
-    # ソケットからバイト列を読み込む
-    received_msg = b''.join(recv_msg(client_socket, 8))
-    # 読み込んだバイト列を表示する
-    print(f'received: {received_msg}')
-    # 64 ビットの整数として解釈する
-    (added_value, ) = struct.unpack('!q', received_msg)
-    # 解釈した値を表示する
-    print(f'result: {added_value}')
-    # ソケットを閉じる
-    client_socket.close()
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
+        # ループバックアドレスの TCP/54321 ポートに接続する
+        client_socket.connect(("127.0.0.1", 54321))
+        # 足し算したい値を用意する
+        operand1, operand2 = 1000, 2000
+        # 送信する値を確認する
+        print(f"operand1: {operand1}, operand2: {operand2}")
+        # ネットワークバイトオーダーのバイト列に変換する
+        request_msg = struct.pack("!ii", operand1, operand2)
+        # ソケットにバイト列を書き込む
+        send_msg(client_socket, request_msg)
+        # 書き込んだバイト列を表示する
+        print(f"sent: {request_msg}")
+        # ソケットからバイト列を読み込む
+        received_msg = b"".join(recv_msg(client_socket, 8))
+        # 読み込んだバイト列を表示する
+        print(f"received: {received_msg}")
+        # 64 ビットの整数として解釈する
+        (added_value,) = struct.unpack("!q", received_msg)
+        # 解釈した値を表示する
+        print(f"result: {added_value}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     """スクリプトのエントリーポイントとしてメイン関数を実行する"""
     main()
